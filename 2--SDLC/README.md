@@ -80,7 +80,7 @@ The **Software Development Life Cycle (SDLC)** is a well-defined process that ou
 
 Below is a visual representation of the SDLC process:
 
-![SDLC Process](../assets/sdlc_process.png)
+![SDLC Process](image.png)
 
 ---
 
