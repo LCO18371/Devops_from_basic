@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Set the environment (dev, stg, qa, etc.)
-ENVIRONMENT="${1:-dev}"  # Default to 'dev' if no argument is provided
+ENVIRONMENT="${1:-us}"  # Default to 'dev' if no argument is provided
 
 # Source and destination S3 buckets
 #SOURCE_BUCKET="template-yaml/be-pipeline"
@@ -11,11 +11,41 @@ DEST_BUCKET="ravi-artifact-bucket"
 # Function to copy templates from source to destination S3 bucket
 copy_templates_to_perm_bucket() {
   local APP_NAME="$1"
+
+  if [ "$APP_NAME" == "usdev-usw2-common-initial-setup" ]; then
+    echo "--------------------------------------------------------------------"
+    echo "APP_NAME is exist, $APP_NAME updating the source_bucket location"
+    
+    SOURCE_BUCKET="ravi-pipeline-template/usw2-common-initial-setup-pipeline"
+    
   # Copy templates to the destination bucket
-  aws s3 cp "s3://${SOURCE_BUCKET}/generic-be-codepipline-main.yaml" "s3://${DEST_BUCKET}/dev-pipeline-yaml/${APP_NAME}-pipeline/${APP_NAME}-pipeline-main.yaml"
-  aws s3 cp "s3://${SOURCE_BUCKET}/generic-be-codepipline-roles.yaml" "s3://${DEST_BUCKET}/dev-pipeline-yaml/${APP_NAME}-pipeline/${APP_NAME}-pipeline-roles.yaml"
-  aws s3 cp "s3://${SOURCE_BUCKET}/generic-be-codepipline.yaml" "s3://${DEST_BUCKET}/dev-pipeline-yaml/${APP_NAME}-pipeline/${APP_NAME}-pipeline.yaml"
+    aws s3 cp "s3://${SOURCE_BUCKET}/usdev-usw2-common-initial-setup-pipeline-main.yaml" "s3://${DEST_BUCKET}/dev-pipeline-yaml/${APP_NAME}-pipeline/${APP_NAME}-pipeline-main.yaml"
+    aws s3 cp "s3://${SOURCE_BUCKET}/usdev-usw2-common-initial-setup-pipeline-roles.yaml" "s3://${DEST_BUCKET}/dev-pipeline-yaml/${APP_NAME}-pipeline/${APP_NAME}-pipeline-roles.yaml"
+    aws s3 cp "s3://${SOURCE_BUCKET}/usdev-usw2-common-initial-setup-pipeline.yaml" "s3://${DEST_BUCKET}/dev-pipeline-yaml/${APP_NAME}-pipeline/${APP_NAME}-pipeline.yaml"
+    echo
+  
+  elif [ "$APP_NAME" == "usv1-generic-init-create" ]; then
+    echo "--------------------------------------------------------------------"
+    
+    SOURCE_BUCKET="ravi-pipeline-template/generic-init-create-pipeline"
+    # Copy templates to the destination bucket
+    aws s3 cp "s3://${SOURCE_BUCKET}/generic-init-codepipline-main.yaml" "s3://${DEST_BUCKET}/dev-pipeline-yaml/${APP_NAME}-pipeline/${APP_NAME}-pipeline-main.yaml"
+    aws s3 cp "s3://${SOURCE_BUCKET}/generic-init-codepipline-roles.yaml" "s3://${DEST_BUCKET}/dev-pipeline-yaml/${APP_NAME}-pipeline/${APP_NAME}-pipeline-roles.yaml"
+    aws s3 cp "s3://${SOURCE_BUCKET}/generic-init-codepipline.yaml" "s3://${DEST_BUCKET}/dev-pipeline-yaml/${APP_NAME}-pipeline/${APP_NAME}-pipeline.yaml"
+    echo "APP_NAME is exist, $APP_NAME updating the source_bucket location"
+  else
+    echo "--------------------------------------------------------------------"
+    SOURCE_BUCKET="ravi-pipeline-template"
+    # Copy templates to the destination bucket
+    aws s3 cp "s3://${SOURCE_BUCKET}/generic-be-codepipline-main.yaml" "s3://${DEST_BUCKET}/dev-pipeline-yaml/${APP_NAME}-pipeline/${APP_NAME}-pipeline-main.yaml"
+    aws s3 cp "s3://${SOURCE_BUCKET}/generic-be-codepipline-roles.yaml" "s3://${DEST_BUCKET}/dev-pipeline-yaml/${APP_NAME}-pipeline/${APP_NAME}-pipeline-roles.yaml"
+    aws s3 cp "s3://${SOURCE_BUCKET}/generic-be-codepipline.yaml" "s3://${DEST_BUCKET}/dev-pipeline-yaml/${APP_NAME}-pipeline/${APP_NAME}-pipeline.yaml"
+      
+    echo "APP_NAME does not exist, no update on source_bucket location"
+  fi
+  
 }
+
 
 # Function to create or update a pipeline using parameters
 create_or_update_pipeline() {
@@ -37,6 +67,18 @@ create_or_update_pipeline() {
   local PARAMETERS_FILE="${12}"
   local SAM_INPUT_FILE="${13}"
   local SAM_OUTPUT_FILE="${14}"
+  
+  # Additional variables
+  local ARTIFACT_BUCKET_NAME="usdev-cloudformation-artifacts"
+  local BUCKET_OBJECT_PATH="dev/${APP_NAME}/terraform.tfstate"
+  local BUILDSPEC_FILE_NAME_APPLY="config/common_initial_setup/buildspec-apply.yaml"
+  local BUILDSPEC_FILE_NAME_PLAN="config/common_initial_setup/buildspec-plan.yaml"
+  local COUNTRY_ENV="usdev"
+  local DEPLOYMENT_REGION="usw2"
+  local DYNAMODB_TABLE_NAME="usnp-usw2-terraform-state-locking-table"
+  local REGION="us"
+  local STATEFILE_BUCKET="usnp-usw2-terraform-statefile-bucket"
+  local VARIABLE_FILE_PATH="tfvars_file/us_account/usw2/${APP_NAME}.tfvars"
 
 # Print all the variables
 echo "APP_NAME: $APP_NAME"
@@ -66,12 +108,25 @@ echo "SAM_OUTPUT_FILE: $SAM_OUTPUT_FILE"
 
   local CONDITIONAL_PARAMETERS=""
   if [ "$PIPELINE_TYPE" == "frontend" ]; then
+    CONDITIONAL_PARAMETERS+="ParameterKey=BuildSpecFileName,ParameterValue=$BUILDSPEC_FILE "
     CONDITIONAL_PARAMETERS+="ParameterKey=BucketName,ParameterValue=$BUCKET_NAME "
     CONDITIONAL_PARAMETERS+="ParameterKey=ObjectKey,ParameterValue=$OBJECTKEY "
   elif [ "$PIPELINE_TYPE" == "backend" ]; then
+    CONDITIONAL_PARAMETERS+="ParameterKey=BuildSpecFileName,ParameterValue=$BUILDSPEC_FILE "
     CONDITIONAL_PARAMETERS+="ParameterKey=ParametersFile,ParameterValue=$PARAMETERS_FILE "
     CONDITIONAL_PARAMETERS+="ParameterKey=SamInputFile,ParameterValue=$SAM_INPUT_FILE "
     CONDITIONAL_PARAMETERS+="ParameterKey=SamOutputFile,ParameterValue=$SAM_OUTPUT_FILE "
+  elif [ "$PIPELINE_TYPE" == "New_frontend" ]; then
+    CONDITIONAL_PARAMETERS+="ParameterKey=ArtifactBucketName,ParameterValue=$ARTIFACT_BUCKET_NAME "
+    CONDITIONAL_PARAMETERS+="ParameterKey=BucketObjectPath,ParameterValue=$BUCKET_OBJECT_PATH "
+    CONDITIONAL_PARAMETERS+="ParameterKey=BuildSpecFileNameApply,ParameterValue=$BUILDSPEC_FILE_NAME_APPLY "
+    CONDITIONAL_PARAMETERS+="ParameterKey=BuildSpecFileNamePlan,ParameterValue=$BUILDSPEC_FILE_NAME_PLAN "
+    CONDITIONAL_PARAMETERS+="ParameterKey=CountryEnv,ParameterValue=$COUNTRY_ENV "
+    CONDITIONAL_PARAMETERS+="ParameterKey=DeploymentRegion,ParameterValue=$DEPLOYMENT_REGION "
+    CONDITIONAL_PARAMETERS+="ParameterKey=DynamoDBTableName,ParameterValue=$DYNAMODB_TABLE_NAME "
+    CONDITIONAL_PARAMETERS+="ParameterKey=Region,ParameterValue=$REGION "
+    CONDITIONAL_PARAMETERS+="ParameterKey=StatefileBucket,ParameterValue=$STATEFILE_BUCKET "
+    CONDITIONAL_PARAMETERS+="ParameterKey=VariableFilePath,ParameterValue=$VARIABLE_FILE_PATH "
   fi
 
   echo "Checking if stack exists: $STACK_NAME"
@@ -84,7 +139,6 @@ echo "SAM_OUTPUT_FILE: $SAM_OUTPUT_FILE"
       --stack-name "$STACK_NAME-stack" \
       --template-url "$TEMPLATE_URL" \
       --parameters ParameterKey=AppName,ParameterValue="$APP_NAME" \
-                   ParameterKey=BuildSpecFileName,ParameterValue="$BUILDSPEC_FILE" \
                    ParameterKey=CodeBuildImage,ParameterValue="$CODEBUILD_IMAGE" \
                    ParameterKey=CodePipelineTemplateURL,ParameterValue="$CODEPIPELINE_TEMPLATE_URL" \
                    ParameterKey=GitHubRepoBranch,ParameterValue="$GITHUB_REPO_BRANCH" \
@@ -105,23 +159,26 @@ else
     echo "================================================================="
     echo "CODEPIPELINE_TEMPLATE_URL: $CODEPIPELINE_TEMPLATE_URL, ROLES_TEMPLATE_URL: $ROLES_TEMPLATE_URL"
     
-        aws cloudformation create-stack \
-            --stack-name "$STACK_NAME-stack" \
-            --template-url "$TEMPLATE_URL" \
-            --parameters ParameterKey=AppName,ParameterValue="$APP_NAME" \
-                        ParameterKey=BuildSpecFileName,ParameterValue="$BUILDSPEC_FILE" \
-                        ParameterKey=CodeBuildImage,ParameterValue="$CODEBUILD_IMAGE" \
-                        ParameterKey=CodePipelineTemplateURL,ParameterValue="$CODEPIPELINE_TEMPLATE_URL" \
-                        ParameterKey=GitHubRepoBranch,ParameterValue="$GITHUB_REPO_BRANCH" \
-                        ParameterKey=GitHubRepoName,ParameterValue="$GITHUB_REPO_NAME" \
-                        ParameterKey=GitHubUser,ParameterValue="$GITHUB_USER" \
-                        ParameterKey=GitHubToken,ParameterValue="$GITHUB_TOKEN" \
-                        $CONDITIONAL_PARAMETERS \
-                        ParameterKey=RolesTemplateURL,ParameterValue="$ROLES_TEMPLATE_URL" \
-            --tags $TAGS \
-            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
+    echo "Creating stack: $STACK_NAME-stack"
+    aws cloudformation create-stack \
+        --stack-name "$STACK_NAME-stack" \
+        --template-url "$TEMPLATE_URL" \
+        --parameters ParameterKey=AppName,ParameterValue="$APP_NAME" \
+                     ParameterKey=CodeBuildImage,ParameterValue="$CODEBUILD_IMAGE" \
+                     ParameterKey=CodePipelineTemplateURL,ParameterValue="$CODEPIPELINE_TEMPLATE_URL" \
+                     ParameterKey=GitHubRepoBranch,ParameterValue="$GITHUB_REPO_BRANCH" \
+                     ParameterKey=GitHubRepoName,ParameterValue="$GITHUB_REPO_NAME" \
+                     ParameterKey=GitHubUser,ParameterValue="$GITHUB_USER" \
+                     ParameterKey=GitHubToken,ParameterValue="$GITHUB_TOKEN" \
+                     $CONDITIONAL_PARAMETERS \
+                     ParameterKey=RolesTemplateURL,ParameterValue="$ROLES_TEMPLATE_URL" \
+        --tags $TAGS \
+        --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
+
+    echo "Waiting for stack creation to complete..."
+    aws cloudformation wait stack-create-complete --stack-name "$STACK_NAME-stack"
+    echo "Stack creation completed: $STACK_NAME-stack"
             fi
-  
   if [ $? -ne 0 ]; then
     echo "Error processing stack: $STACK_NAME"
   else
@@ -159,7 +216,6 @@ echo "Evaluating BLOCK: $BLOCK"
     create_or_update_pipeline "$APP_NAME" "$CODEBUILD_IMAGE"  "$BUILDSPEC_FILE" "$GITHUB_REPO_NAME" "$GITHUB_REPO_BRANCH" "$GITHUB_USER" "$GITHUB_TOKEN" "$TAGS" "$PIPELINE_TYPE" "$BUCKET_NAME" "$OBJECTKEY" "$PARAMETERS_FILE" "$SAM_INPUT_FILE" "$SAM_OUTPUT_FILE" &
             
   fi
-  
   # Wait for all background jobs to complete
   wait
 }
