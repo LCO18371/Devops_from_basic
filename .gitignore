@@ -1,5 +1,39 @@
+# Local .terraform directories
+**/.terraform/*
+
+# Terraform state files
+*.tfstate
+*.tfstate.backup
+
+# Crash log files
+crash.log
+
+# Exclude override files as they are usually local-only
+*.tfvars
+*.tfvars.json
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+ .terraform.lock.hcl can be committed if you want consistent provider versions
+# Uncomment the next line if you want to exclude it:
+ .terraform.lock.hcl
+
+# Editor and IDE files
+.idea/
+.vscode/
+*.swp
+
+# Mac system files
+.DS_Store
+
 /.terraform/
 /.idea/
 /.terraform.lock.hcl
 /terraform.tfstate
 /terraform.tfstate.backup
+/11--Terraform/11.0_Terraform_ec2_creation/.terraform/
+/11--Terraform/11.0_Terraform_ec2_creation/.terraform.lock.hcl
+/11--Terraform/11.0_Terraform_ec2_creation/terraform.tfstate
+/11--Terraform/11.0_Terraform_ec2_creation/terraform.tfstate.backup
