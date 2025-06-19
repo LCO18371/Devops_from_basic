@@ -209,7 +209,7 @@ create_or_update_pipeline() {
     echo "Conditional Parameters: $conditional_parameters"
 
     # Stack name
-    stack_name="${app_name}-stack"
+    stack_name="${app_name}-stack-${PIP}"
     if aws cloudformation describe-stacks --stack-name "$stack_name" >/dev/null 2>&1; then
         aws cloudformation update-stack \
         --stack-name "$stack_name" \
@@ -248,36 +248,43 @@ create_or_update_pipeline() {
 
 process_pipeline_blocks() {
   local block=""
-  local pattern="^\[PIPELINE\]"
+  local inside_pipeline=0
 
   while IFS= read -r line || [[ -n "$line" ]]; do
-    if [[ "$line" =~ $pattern ]]; then
-      if [[ -n "$block" ]]; then
+    if [[ "$line" =~ ^\[PIPELINE\] ]]; then
+      if [[ $inside_pipeline -eq 1 && -n "$block" ]]; then
         eval "$block"
         copy_templates_to_perm_bucket "$APP_NAME"
         create_or_update_pipeline "$APP_NAME" "$CODEBUILD_IMAGE" "$BUILDSPEC_FILE" "$GITHUB_REPO_NAME" "$GITHUB_REPO_BRANCH" "$GITHUB_USER" "$GITHUB_TOKEN" "$TAGS" "$PIPELINE_TYPE" "$BUCKET_NAME" "$OBJECTKEY" "$PARAMETERS_FILE" "$SAM_INPUT_FILE" "$SAM_OUTPUT_FILE" "$SOURCE_BUCKET" "$DEST_BUCKET" "$DEST_BUCKET_FOLDER"
-         block=""
+        block=""
       fi
-    else
+      inside_pipeline=1
+    elif [[ "$line" =~ ^\[.*\] ]]; then
+      inside_pipeline=0
+      block=""
+    elif [[ $inside_pipeline -eq 1 ]]; then
       block+="${line}"$'\n'
     fi
   done < "$VAR_FILE"
 
-  if [[ -n "$block" ]]; then
+  if [[ $inside_pipeline -eq 1 && -n "$block" ]]; then
     eval "$block"
     copy_templates_to_perm_bucket "$APP_NAME"
-    create_or_update_pipeline "$APP_NAME" "$CODEBUILD_IMAGE" "$BUILDSPEC_FILE" "$GITHUB_REPO_NAME" "$GITHUB_REPO_BRANCH" "$GITHUB_USER" "$GITHUB_TOKEN" "$TAGS" "$PIPELINE_TYPE" "$BUCKET_NAME" "$OBJECTKEY" "$PARAMETERS_FILE" "$SAM_INPUT_FILE" "$SAM_OUTPUT_FILE" "$SOURCE_BUCKET" "$DEST_BUCKET" "$DEST_BUCKET_FOLDER"    
+    create_or_update_pipeline "$APP_NAME" "$CODEBUILD_IMAGE" "$BUILDSPEC_FILE" "$GITHUB_REPO_NAME" "$GITHUB_REPO_BRANCH" "$GITHUB_USER" "$GITHUB_TOKEN" "$TAGS" "$PIPELINE_TYPE" "$BUCKET_NAME" "$OBJECTKEY" "$PARAMETERS_FILE" "$SAM_INPUT_FILE" "$SAM_OUTPUT_FILE" "$SOURCE_BUCKET" "$DEST_BUCKET" "$DEST_BUCKET_FOLDER"
   fi
 }
 
 main() {
-  if ! validate_var_file; then
-    printf '%s\n'"Validation failed. Check var.txt\n" >&2
+  if [[ ! -f "$VAR_FILE" ]]; then
+    printf 'Error: Variable file %s not found\n' "$VAR_FILE" >&2
     return 1
   fi
 
-  if [[ ! -f "$VAR_FILE" ]]; then
-    printf '%s\n'"Error: Variable file %s not found\n" "$VAR_FILE" >&2
+  # Load [GLOBAL] block variables
+  extract_global_variables
+
+  if ! validate_var_file; then
+    printf 'Validation failed. Check var.txt\n' >&2
     return 1
   fi
 
@@ -285,15 +292,17 @@ main() {
 }
 
 
+
 validate_var_file() {
   local file="var.txt"
   local app_names=()
   local current_block=""
+  local inside_pipeline=0
   local line
 
   while IFS= read -r line || [[ -n "$line" ]]; do
     if [[ "$line" =~ ^\[PIPELINE\] ]]; then
-      if [[ -n "$current_block" ]]; then
+      if [[ $inside_pipeline -eq 1 && -n "$current_block" ]]; then
         local app_name
         app_name=$(grep '^APP_NAME=' <<< "$current_block" | cut -d= -f2)
         if [[ -z "$app_name" ]]; then
@@ -307,13 +316,17 @@ validate_var_file() {
         app_names+=("$app_name")
       fi
       current_block=""
-    else
+      inside_pipeline=1
+    elif [[ "$line" =~ ^\[.*\] ]]; then
+      inside_pipeline=0
+      current_block=""
+    elif [[ $inside_pipeline -eq 1 ]]; then
       current_block+="$line"$'\n'
     fi
   done < "$file"
 
-  # Check last block
-  if [[ -n "$current_block" ]]; then
+  # Check the last block
+  if [[ $inside_pipeline -eq 1 && -n "$current_block" ]]; then
     local app_name
     app_name=$(grep '^APP_NAME=' <<< "$current_block" | cut -d= -f2)
     if [[ -z "$app_name" ]]; then
@@ -328,4 +341,29 @@ validate_var_file() {
 
   return 0
 }
+
+extract_global_variables() {
+  local block=""
+  local inside_global=0
+  local line
+
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    if [[ "$line" =~ ^\[GLOBAL\] ]]; then
+      inside_global=1
+      continue
+    elif [[ "$line" =~ ^\[.*\] ]]; then
+      inside_global=0
+    fi
+
+    if [[ $inside_global -eq 1 ]]; then
+      block+="$line"$'\n'
+    fi
+  done < "$VAR_FILE"
+
+  if [[ -n "$block" ]]; then
+    eval "$block"
+  fi
+}
+
+
 main "$@"
