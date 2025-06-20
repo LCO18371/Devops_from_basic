@@ -27,8 +27,9 @@
 set -euo pipefail
 set -x
 
-ENVIRONMENT="${1:-us}" 
-REGION="${2:-usw2}"
+ENVIRONMENT="${1:-usv1}"
+ENVIRONMENT1="${2:-usdev}" 
+REGION="${3:-usw2}"
 #pipeline1="usdev-usw2-common-initial-setup"
 #pipeline2="usv1-generic-init-create"
 #pipeline3="usv1-generic-be-ec2-create"
@@ -36,7 +37,7 @@ REGION="${2:-usw2}"
 #pipeline5="usv1-generic-fe-create"
 #pipeline6="usv1-generic-ec2-create"
 
-Pipeline1="$ENVIRONMENT-$REGION-common-initial-setup"
+Pipeline1="$ENVIRONMENT1-$REGION-common-initial-setup"
 Pipeline2="$ENVIRONMENT-$REGION-generic-init-create"
 Pipeline3="$ENVIRONMENT-$REGION-generic-be-ec2-create"
 Pipeline4="$ENVIRONMENT-$REGION-generic-be-create"
