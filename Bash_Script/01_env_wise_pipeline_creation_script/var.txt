@@ -4,6 +4,7 @@ github_repo_branch="dev"
 github_repo_name="Omoron-DevOps"
 github_token="123456"
 github_user="Ravi"
+dest_bucket="ravi-artifact-bucket"
 
 [PIPELINE]
 APP_NAME="${ENVIRONMENT1}-${REGION}-common-initial-setup"
@@ -21,8 +22,8 @@ PARAMETERS_FILE="bsadnm"
 SAM_INPUT_FILE="dasdas"
 SAM_OUTPUT_FILE="dsdsa"
 SOURCE_BUCKET="ravi-pipeline-template"
-DEST_BUCKET="ravi-artifact-bucket"
-DEST_BUCKET_FOLDER="dev-pipeline-yaml"
+DEST_BUCKET="${dest_bucket}"
+
 
 [PIPELINE]
 APP_NAME="${ENVIRONMENT}-generic-fe-create"
@@ -40,8 +41,8 @@ PARAMETERS_FILE="bsadnm"
 SAM_INPUT_FILE="dasdas"
 SAM_OUTPUT_FILE="dsdsa"
 SOURCE_BUCKET="ravi-pipeline-template"
-DEST_BUCKET="ravi-artifact-bucket"
-DEST_BUCKET_FOLDER="dev-pipeline-yaml"
+DEST_BUCKET="${dest_bucket}"
+
 
 [PIPELINE]
 APP_NAME="${ENVIRONMENT}-generic-ec2-create"
@@ -59,8 +60,8 @@ PARAMETERS_FILE=""
 SAM_INPUT_FILE=""
 SAM_OUTPUT_FILE=""
 SOURCE_BUCKET="ravi-pipeline-template"
-DEST_BUCKET="ravi-artifact-bucket"
-DEST_BUCKET_FOLDER="dev-pipeline-yaml"
+DEST_BUCKET="${dest_bucket}"
+
 
 
 [PIPELINE]
@@ -79,8 +80,8 @@ PARAMETERS_FILE=""
 SAM_INPUT_FILE=""
 SAM_OUTPUT_FILE=""
 SOURCE_BUCKET="ravi-pipeline-template"
-DEST_BUCKET="ravi-artifact-bucket"
-DEST_BUCKET_FOLDER="dev-pipeline-yaml"
+DEST_BUCKET="${dest_bucket}"
+
 
 [PIPELINE]
 APP_NAME="${ENVIRONMENT}-generic-be-ec2-create"
@@ -98,8 +99,8 @@ PARAMETERS_FILE=""
 SAM_INPUT_FILE=""
 SAM_OUTPUT_FILE=""
 SOURCE_BUCKET="ravi-pipeline-template"
-DEST_BUCKET="ravi-artifact-bucket"
-DEST_BUCKET_FOLDER="dev-pipeline-yaml"
+DEST_BUCKET="${dest_bucket}"
+
 
 [PIPELINE]
 APP_NAME="${ENVIRONMENT}-generic-be-create"
@@ -117,6 +118,5 @@ PARAMETERS_FILE=""
 SAM_INPUT_FILE=""
 SAM_OUTPUT_FILE=""
 SOURCE_BUCKET="ravi-pipeline-template"
-DEST_BUCKET="ravi-artifact-bucket"
-DEST_BUCKET_FOLDER="dev-pipeline-yaml"
+DEST_BUCKET="${dest_bucket}"
 
