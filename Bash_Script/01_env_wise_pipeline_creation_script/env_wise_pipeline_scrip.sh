@@ -128,7 +128,7 @@ copy_templates_to_perm_bucket() {
       printf '%s\n'"APP_NAME does not match special cases: %s, using default source_bucket\n" "$app_name"
       ;;
   esac
-  local dest_prefix="s3://${DEST_BUCKET}/$DEST_BUCKET_FOLDER/${app_name}-$PIP"
+  local dest_prefix="s3://${DEST_BUCKET}/${app_name}-$PIP"
   local source_prefix="s3://${SOURCE_BUCKET}"
 
 
@@ -187,9 +187,9 @@ create_or_update_pipeline() {
     local sam_output_file="${14}"
 
     # template urls
-    local roles_template_url="https://${DEST_BUCKET}.s3.us-east-1.amazonaws.com/$DEST_BUCKET_FOLDER/${app_name}-$PIP/${app_name}-$PIP-roles.yaml"
-    local codepipeline_template_url="https://${DEST_BUCKET}.s3.us-east-1.amazonaws.com/$DEST_BUCKET_FOLDER/${app_name}-$PIP/${app_name}-$PIP.yaml"
-    local template_url="https://${DEST_BUCKET}.s3.us-east-1.amazonaws.com/$DEST_BUCKET_FOLDER/${app_name}-$PIP/${app_name}-$PIP-main.yaml"
+    local roles_template_url="https://${DEST_BUCKET}.s3.us-east-1.amazonaws.com/${app_name}-$PIP/${app_name}-$PIP-roles.yaml"
+    local codepipeline_template_url="https://${DEST_BUCKET}.s3.us-east-1.amazonaws.com/${app_name}-$PIP/${app_name}-$PIP.yaml"
+    local template_url="https://${DEST_BUCKET}.s3.us-east-1.amazonaws.com/${app_name}-$PIP/${app_name}-$PIP-main.yaml"
 
     
     local conditional_parameters=""
@@ -256,7 +256,7 @@ process_pipeline_blocks() {
       if [[ $inside_pipeline -eq 1 && -n "$block" ]]; then
         eval "$block"
         copy_templates_to_perm_bucket "$APP_NAME"
-        create_or_update_pipeline "$APP_NAME" "$CODEBUILD_IMAGE" "$BUILDSPEC_FILE" "$GITHUB_REPO_NAME" "$GITHUB_REPO_BRANCH" "$GITHUB_USER" "$GITHUB_TOKEN" "$TAGS" "$PIPELINE_TYPE" "$BUCKET_NAME" "$OBJECTKEY" "$PARAMETERS_FILE" "$SAM_INPUT_FILE" "$SAM_OUTPUT_FILE" "$SOURCE_BUCKET" "$DEST_BUCKET" "$DEST_BUCKET_FOLDER"
+        create_or_update_pipeline "$APP_NAME" "$CODEBUILD_IMAGE" "$BUILDSPEC_FILE" "$GITHUB_REPO_NAME" "$GITHUB_REPO_BRANCH" "$GITHUB_USER" "$GITHUB_TOKEN" "$TAGS" "$PIPELINE_TYPE" "$BUCKET_NAME" "$OBJECTKEY" "$PARAMETERS_FILE" "$SAM_INPUT_FILE" "$SAM_OUTPUT_FILE" "$SOURCE_BUCKET" "$DEST_BUCKET" 
         block=""
       fi
       inside_pipeline=1
@@ -271,7 +271,7 @@ process_pipeline_blocks() {
   if [[ $inside_pipeline -eq 1 && -n "$block" ]]; then
     eval "$block"
     copy_templates_to_perm_bucket "$APP_NAME"
-    create_or_update_pipeline "$APP_NAME" "$CODEBUILD_IMAGE" "$BUILDSPEC_FILE" "$GITHUB_REPO_NAME" "$GITHUB_REPO_BRANCH" "$GITHUB_USER" "$GITHUB_TOKEN" "$TAGS" "$PIPELINE_TYPE" "$BUCKET_NAME" "$OBJECTKEY" "$PARAMETERS_FILE" "$SAM_INPUT_FILE" "$SAM_OUTPUT_FILE" "$SOURCE_BUCKET" "$DEST_BUCKET" "$DEST_BUCKET_FOLDER"
+    create_or_update_pipeline "$APP_NAME" "$CODEBUILD_IMAGE" "$BUILDSPEC_FILE" "$GITHUB_REPO_NAME" "$GITHUB_REPO_BRANCH" "$GITHUB_USER" "$GITHUB_TOKEN" "$TAGS" "$PIPELINE_TYPE" "$BUCKET_NAME" "$OBJECTKEY" "$PARAMETERS_FILE" "$SAM_INPUT_FILE" "$SAM_OUTPUT_FILE" "$SOURCE_BUCKET" "$DEST_BUCKET"
   fi
 }
 
