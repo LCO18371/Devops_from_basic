@@ -1,3 +1,4 @@
+#!/bin/bash
 # Author: Ravi Kumar
 # step 1. install awscli
 # step 2. update the path in line 31.
@@ -22,8 +23,6 @@
 
 
 
-#!/bin/bash
-
 set -euo pipefail
 set -x
 
@@ -38,11 +37,11 @@ REGION="${3:-usw2}"
 #pipeline6="usv1-generic-ec2-create"
 
 Pipeline1="$ENVIRONMENT1-$REGION-common-initial-setup"
-Pipeline2="$ENVIRONMENT-$REGION-generic-init-create"
-Pipeline3="$ENVIRONMENT-$REGION-generic-be-ec2-create"
-Pipeline4="$ENVIRONMENT-$REGION-generic-be-create"
-Pipeline5="$ENVIRONMENT-$REGION-generic-fe-create"
-Pipeline6="$ENVIRONMENT-$REGION-generic-ec2-create"
+Pipeline2="$ENVIRONMENT-generic-init-create"
+Pipeline3="$ENVIRONMENT-generic-be-create"
+Pipeline4="$ENVIRONMENT-generic-fe-create"
+Pipeline5="$ENVIRONMENT-generic-ec2-create"
+Pipeline6="$ENVIRONMENT-generic-be-ec2-create"
 PIP="pipeline"
 VAR_FILE="var.txt"
 
@@ -78,97 +77,46 @@ common_initial_setup() {
     echo "$conditional_parameters"
 }
 
-
-
-
-
-
-
-
-
 copy_templates_to_perm_bucket() {
   local app_name="$1"
-  echo "app_name: $app_name"
+  echo "Processing template for: $app_name"
 
-    case "$app_name" in
-    "$Pipeline1")
-      printf '%s\n' "--------------------------------------------------------------------"
-      printf '%s\n'"APP_NAME exists: %s, updating source_bucket location\n" "$app_name"
-      SOURCE_BUCKET="$SOURCE_BUCKET/$Pipeline1-$PIP"
-      echo "source_bucket: $SOURCE_BUCKET"
-      ;;
-    "$Pipeline2")
-      printf '%s\n' "--------------------------------------------------------------------"
-      printf '%s\n'"APP_NAME exists: %s, updating source_bucket location\n" "$app_name"
-      SOURCE_BUCKET="$SOURCE_BUCKET/$Pipeline2-$PIP"
-      ;;
-    "$Pipeline3")
-      printf '%s\n' "--------------------------------------------------------------------"
-      printf '%s\n'"APP_NAME exists: %s, updating source_bucket location\n" "$app_name"
-      SOURCE_BUCKET="$SOURCE_BUCKET/$Pipeline3-$PIP"
-      ;;
-    "$Pipeline4")
-      printf '%s\n' "--------------------------------------------------------------------"
-      printf '%s\n'"APP_NAME exists: %s, updating source_bucket location\n" "$app_name"
-      SOURCE_BUCKET="$SOURCE_BUCKET/$Pipeline4-$PIP"
-      ;;
-    "$Pipeline5")
-      printf '%s\n' "--------------------------------------------------------------------"
-      printf '%s\n'"APP_NAME exists: %s, updating source_bucket location\n" "$app_name"
-      SOURCE_BUCKET="$SOURCE_BUCKET/$Pipeline5-$PIP"
-      ;;
-    "$Pipeline6")
-      printf '%s\n' "--------------------------------------------------------------------"
-      printf '%s\n'"APP_NAME exists: %s, updating source_bucket location\n" "$app_name"
-      SOURCE_BUCKET="$SOURCE_BUCKET/$Pipeline6-$PIP"
-      ;;
-    *)
-      echo "--------------------------------------------------------------------\n"
-      SOURCE_BUCKET="$SOURCE_BUCKET/$Pipeline3-$PIP"
-      printf '%s\n'"APP_NAME does not match special cases: %s, using default source_bucket\n" "$app_name"
+  # Path setup
+  local template_dir="/home/ubuntu/Github_repo/Devops_from_basic/Bash_Script/01_env_wise_pipeline_creation_script/templates"
+  local folder_name=""
+
+  case "$app_name" in
+    "$Pipeline1") folder_name="usw2-common-initial-setup-pipeline" ;;
+    "$Pipeline2") folder_name="usv1-generic-init-create-pipeline" ;;
+    "$Pipeline3") folder_name="usv1-generic-be-ec2-create-pipeline" ;;
+    "$Pipeline4") folder_name="usv1-generic-default-pipeline" ;;
+    "$Pipeline5") folder_name="usv1-generic-default-pipeline" ;;
+    "$Pipeline6") folder_name="usv1-generic-default-pipeline" ;;
+    *) 
+      echo "❌ Error: Unrecognized pipeline name: $app_name"
+      return 1
       ;;
   esac
-  local dest_prefix="s3://${DEST_BUCKET}/${app_name}-$PIP"
-  local source_prefix="s3://${SOURCE_BUCKET}"
 
+  # Create a local temp folder for this pipeline
+  local local_temp_folder="/tmp/${app_name}-${PIP}"
+  mkdir -p "$local_temp_folder"
 
+  # Copy the templates to the temp folder
+  cp "$template_dir/$folder_name/main.yaml" "$local_temp_folder/${app_name}-${PIP}-main.yaml"
+  cp "$template_dir/$folder_name/pipeline.yaml" "$local_temp_folder/${app_name}-${PIP}.yaml"
+  cp "$template_dir/$folder_name/roles.yaml" "$local_temp_folder/${app_name}-${PIP}-roles.yaml"
 
-#pipeline1="usdev-usw2-common-initial-setup"
-  if [[ "$app_name" == "$Pipeline1" ]]; then
-    aws s3 cp "${source_prefix}/$Pipeline1-$PIP-main.yaml" "${dest_prefix}/${app_name}-$PIP-main.yaml"
-    aws s3 cp "${source_prefix}/$Pipeline1-$PIP-roles.yaml" "${dest_prefix}/${app_name}-$PIP-roles.yaml"
-    aws s3 cp "${source_prefix}/$Pipeline1-$PIP.yaml" "${dest_prefix}/${app_name}-$PIP.yaml"
-#pipeline2="usv1-generic-init-create"
-  elif [[ "$app_name" == "$Pipeline2" ]]; then
-    aws s3 cp "${source_prefix}/$Pipeline2-$PIP-main.yaml" "${dest_prefix}/${app_name}-$PIP-main.yaml"
-    aws s3 cp "${source_prefix}/$Pipeline2-$PIP-roles.yaml" "${dest_prefix}/${app_name}-$PIP-roles.yaml"
-    aws s3 cp "${source_prefix}/$Pipeline2-$PIP.yaml" "${dest_prefix}/${app_name}-$PIP.yaml"
-#pipeline3="usv1-generic-be-ec2-create" 
-  elif [[ "$app_name" == "$Pipeline3" ]]; then
-    aws s3 cp "${source_prefix}/$Pipeline3-$PIP-main.yaml" "${dest_prefix}/${app_name}-$PIP-main.yaml"
-    aws s3 cp "${source_prefix}/$Pipeline3-$PIP-roles.yaml" "${dest_prefix}/${app_name}-$PIP-roles.yaml"
-    aws s3 cp "${source_prefix}/$Pipeline3-$PIP.yaml" "${dest_prefix}/${app_name}-$PIP.yaml"
+  echo "✅ Templates copied locally to: $local_temp_folder"
+  echo "✅ check the destination bucket name: $DEST_BUCKET and folder: "
 
-    
-#pipeline4="usv1-generic-be-create"
-  elif [[ "$app_name" == "$Pipeline4" ]]; then
-  
-    aws s3 cp "${source_prefix}/$Pipeline4-$PIP-main.yaml" "${dest_prefix}/${app_name}-$PIP-main.yaml"
-    aws s3 cp "${source_prefix}/$Pipeline4-$PIP-roles.yaml" "${dest_prefix}/${app_name}-$PIP-roles.yaml"
-    aws s3 cp "${source_prefix}/$Pipeline4-$PIP.yaml" "${dest_prefix}/${app_name}-$PIP.yaml"
-    #pipeline5="usv1-generic-fe-create"
-  elif [[ "$app_name" == "$Pipeline5" ]]; then
-    aws s3 cp "${source_prefix}/$Pipeline5-$PIP-main.yaml" "${dest_prefix}/${app_name}-$PIP-main.yaml"
-    aws s3 cp "${source_prefix}/$Pipeline5-$PIP-roles.yaml" "${dest_prefix}/${app_name}-$PIP-roles.yaml"
-    aws s3 cp "${source_prefix}/$Pipeline5-$PIP.yaml" "${dest_prefix}/${app_name}-$PIP.yaml"
-    
-#pipeline6="usv1-generic-ec2-create"
-  elif [[ "$app_name" == "$Pipeline6" ]]; then
-    aws s3 cp "${source_prefix}/$Pipeline6-$PIP-main.yaml" "${dest_prefix}/${app_name}-$PIP-main.yaml"
-    aws s3 cp "${source_prefix}/$Pipeline6-$PIP-roles.yaml" "${dest_prefix}/${app_name}-$PIP-roles.yaml"
-    aws s3 cp "${source_prefix}/$Pipeline6-$PIP.yaml" "${dest_prefix}/${app_name}-$PIP.yaml"
-  fi
+  # Upload to S3 directly
+  local s3_path="s3://${DEST_BUCKET}/${app_name}-${PIP}"
+  aws s3 cp "$local_temp_folder/" "$s3_path/" --recursive
+  echo "✅ Templates uploaded to: $s3_path"
 }
+
+
 
 create_or_update_pipeline() {
     local app_name="$1"
@@ -210,7 +158,7 @@ create_or_update_pipeline() {
     echo "Conditional Parameters: $conditional_parameters"
 
     # Stack name
-    stack_name="${app_name}-stack-${PIP}"
+    stack_name="${app_name}-${PIP}"
     if aws cloudformation describe-stacks --stack-name "$stack_name" >/dev/null 2>&1; then
         aws cloudformation update-stack \
         --stack-name "$stack_name" \
@@ -256,7 +204,7 @@ process_pipeline_blocks() {
       if [[ $inside_pipeline -eq 1 && -n "$block" ]]; then
         eval "$block"
         copy_templates_to_perm_bucket "$APP_NAME"
-        create_or_update_pipeline "$APP_NAME" "$CODEBUILD_IMAGE" "$BUILDSPEC_FILE" "$GITHUB_REPO_NAME" "$GITHUB_REPO_BRANCH" "$GITHUB_USER" "$GITHUB_TOKEN" "$TAGS" "$PIPELINE_TYPE" "$BUCKET_NAME" "$OBJECTKEY" "$PARAMETERS_FILE" "$SAM_INPUT_FILE" "$SAM_OUTPUT_FILE" "$SOURCE_BUCKET" "$DEST_BUCKET" 
+        create_or_update_pipeline "$APP_NAME" "$CODEBUILD_IMAGE" "$BUILDSPEC_FILE" "$GITHUB_REPO_NAME" "$GITHUB_REPO_BRANCH" "$GITHUB_USER" "$GITHUB_TOKEN" "$TAGS" "$PIPELINE_TYPE" "$BUCKET_NAME" "$OBJECTKEY" "$PARAMETERS_FILE" "$SAM_INPUT_FILE" "$SAM_OUTPUT_FILE" "$SOURCE_BUCKET" "$DEST_BUCKET"
         block=""
       fi
       inside_pipeline=1

@@ -119,4 +119,3 @@ SAM_INPUT_FILE=""
 SAM_OUTPUT_FILE=""
 SOURCE_BUCKET="ravi-pipeline-template"
 DEST_BUCKET="${dest_bucket}"
-
