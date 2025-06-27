@@ -4,7 +4,10 @@ github_repo_branch="dev"
 github_repo_name="Omoron-DevOps"
 github_token="123456"
 github_user="Ravi"
-dest_bucket="ravi-artifact-bucket"
+dest_bucket="testing-bucket008"
+region="eu-north-1"
+template_dir="/home/ubuntu/Github_repo/Devops_from_basic/Bash_Script/01_env_wise_pipeline_creation_script/templates"
+  
 
 [PIPELINE]
 APP_NAME="${ENVIRONMENT1}-${REGION}-common-initial-setup"
@@ -23,6 +26,8 @@ SAM_INPUT_FILE="dasdas"
 SAM_OUTPUT_FILE="dsdsa"
 SOURCE_BUCKET="ravi-pipeline-template"
 DEST_BUCKET="${dest_bucket}"
+TEMPLAT_DIR="${template_dir}"
+REGION="${region}"
 
 
 [PIPELINE]
@@ -42,6 +47,8 @@ SAM_INPUT_FILE="dasdas"
 SAM_OUTPUT_FILE="dsdsa"
 SOURCE_BUCKET="ravi-pipeline-template"
 DEST_BUCKET="${dest_bucket}"
+TEMPLAT_DIR="${template_dir}"
+REGION="${region}"
 
 
 [PIPELINE]
@@ -61,6 +68,8 @@ SAM_INPUT_FILE=""
 SAM_OUTPUT_FILE=""
 SOURCE_BUCKET="ravi-pipeline-template"
 DEST_BUCKET="${dest_bucket}"
+TEMPLAT_DIR="${template_dir}"
+REGION="${region}"
 
 
 
@@ -81,6 +90,8 @@ SAM_INPUT_FILE=""
 SAM_OUTPUT_FILE=""
 SOURCE_BUCKET="ravi-pipeline-template"
 DEST_BUCKET="${dest_bucket}"
+TEMPLAT_DIR="${template_dir}"
+REGION="${region}"
 
 
 [PIPELINE]
@@ -100,6 +111,8 @@ SAM_INPUT_FILE=""
 SAM_OUTPUT_FILE=""
 SOURCE_BUCKET="ravi-pipeline-template"
 DEST_BUCKET="${dest_bucket}"
+TEMPLAT_DIR="${template_dir}"
+REGION="${region}"
 
 
 [PIPELINE]
@@ -119,3 +132,5 @@ SAM_INPUT_FILE=""
 SAM_OUTPUT_FILE=""
 SOURCE_BUCKET="ravi-pipeline-template"
 DEST_BUCKET="${dest_bucket}"
+TEMPLAT_DIR="${template_dir}"
+REGION="${region}"

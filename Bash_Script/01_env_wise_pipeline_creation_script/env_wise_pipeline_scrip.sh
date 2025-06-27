@@ -82,7 +82,7 @@ copy_templates_to_perm_bucket() {
   echo "Processing template for: $app_name"
 
   # Path setup
-  local template_dir="/home/ubuntu/Github_repo/Devops_from_basic/Bash_Script/01_env_wise_pipeline_creation_script/templates"
+  local template_dir="$TEMPLAT_DIR"
   local folder_name=""
 
   case "$app_name" in
@@ -98,22 +98,15 @@ copy_templates_to_perm_bucket() {
       ;;
   esac
 
-  # Create a local temp folder for this pipeline
-  local local_temp_folder="/tmp/${app_name}-${PIP}"
-  mkdir -p "$local_temp_folder"
-
-  # Copy the templates to the temp folder
-  cp "$template_dir/$folder_name/main.yaml" "$local_temp_folder/${app_name}-${PIP}-main.yaml"
-  cp "$template_dir/$folder_name/pipeline.yaml" "$local_temp_folder/${app_name}-${PIP}.yaml"
-  cp "$template_dir/$folder_name/roles.yaml" "$local_temp_folder/${app_name}-${PIP}-roles.yaml"
-
-  echo "✅ Templates copied locally to: $local_temp_folder"
-  echo "✅ check the destination bucket name: $DEST_BUCKET and folder: "
-
-  # Upload to S3 directly
+  # Destination S3 folder
   local s3_path="s3://${DEST_BUCKET}/${app_name}-${PIP}"
-  aws s3 cp "$local_temp_folder/" "$s3_path/" --recursive
-  echo "✅ Templates uploaded to: $s3_path"
+
+  # Directly upload each file to S3 with renamed format
+  aws s3 cp "$template_dir/$folder_name/main.yaml"    "$s3_path/${app_name}-${PIP}-main.yaml" --region "$REGION"
+  aws s3 cp "$template_dir/$folder_name/pipeline.yaml" "$s3_path/${app_name}-${PIP}.yaml" --region "$REGION"
+  aws s3 cp "$template_dir/$folder_name/roles.yaml"   "$s3_path/${app_name}-${PIP}-roles.yaml" --region "$REGION"
+
+  echo "✅ Templates uploaded directly to: $s3_path"
 }
 
 
@@ -135,9 +128,9 @@ create_or_update_pipeline() {
     local sam_output_file="${14}"
 
     # template urls
-    local roles_template_url="https://${DEST_BUCKET}.s3.us-east-1.amazonaws.com/${app_name}-$PIP/${app_name}-$PIP-roles.yaml"
-    local codepipeline_template_url="https://${DEST_BUCKET}.s3.us-east-1.amazonaws.com/${app_name}-$PIP/${app_name}-$PIP.yaml"
-    local template_url="https://${DEST_BUCKET}.s3.us-east-1.amazonaws.com/${app_name}-$PIP/${app_name}-$PIP-main.yaml"
+    local roles_template_url="https://${DEST_BUCKET}.s3.${REGION}.amazonaws.com/${app_name}-$PIP/${app_name}-$PIP-roles.yaml"
+    local codepipeline_template_url="https://${DEST_BUCKET}.s3.${REGION}.amazonaws.com/${app_name}-$PIP/${app_name}-$PIP.yaml"
+    local template_url="https://${DEST_BUCKET}.s3.${REGION}.amazonaws.com/${app_name}-$PIP/${app_name}-$PIP-main.yaml"
 
     
     local conditional_parameters=""
@@ -163,6 +156,7 @@ create_or_update_pipeline() {
         aws cloudformation update-stack \
         --stack-name "$stack_name" \
         --template-url "$template_url" \
+        --region "$REGION" \
         --parameters ParameterKey=AppName,ParameterValue="$app_name" \
                     ParameterKey=CodeBuildImage,ParameterValue="$codebuild_image" \
                     ParameterKey=CodePipelineTemplateURL,ParameterValue="$codepipeline_template_url" \
@@ -178,6 +172,7 @@ create_or_update_pipeline() {
         aws cloudformation create-stack \
         --stack-name "$stack_name" \
         --template-url "$template_url" \
+        --region "$REGION" \
         --parameters ParameterKey=AppName,ParameterValue="$app_name" \
                     ParameterKey=CodeBuildImage,ParameterValue="$codebuild_image" \
                     ParameterKey=CodePipelineTemplateURL,ParameterValue="$codepipeline_template_url" \
@@ -204,7 +199,7 @@ process_pipeline_blocks() {
       if [[ $inside_pipeline -eq 1 && -n "$block" ]]; then
         eval "$block"
         copy_templates_to_perm_bucket "$APP_NAME"
-        create_or_update_pipeline "$APP_NAME" "$CODEBUILD_IMAGE" "$BUILDSPEC_FILE" "$GITHUB_REPO_NAME" "$GITHUB_REPO_BRANCH" "$GITHUB_USER" "$GITHUB_TOKEN" "$TAGS" "$PIPELINE_TYPE" "$BUCKET_NAME" "$OBJECTKEY" "$PARAMETERS_FILE" "$SAM_INPUT_FILE" "$SAM_OUTPUT_FILE" "$SOURCE_BUCKET" "$DEST_BUCKET"
+        create_or_update_pipeline "$APP_NAME" "$CODEBUILD_IMAGE" "$BUILDSPEC_FILE" "$GITHUB_REPO_NAME" "$GITHUB_REPO_BRANCH" "$GITHUB_USER" "$GITHUB_TOKEN" "$TAGS" "$PIPELINE_TYPE" "$BUCKET_NAME" "$OBJECTKEY" "$PARAMETERS_FILE" "$SAM_INPUT_FILE" "$SAM_OUTPUT_FILE" "$SOURCE_BUCKET" "$DEST_BUCKET" "$TEMPLAT_DIR" "$REGION"
         block=""
       fi
       inside_pipeline=1
@@ -219,7 +214,7 @@ process_pipeline_blocks() {
   if [[ $inside_pipeline -eq 1 && -n "$block" ]]; then
     eval "$block"
     copy_templates_to_perm_bucket "$APP_NAME"
-    create_or_update_pipeline "$APP_NAME" "$CODEBUILD_IMAGE" "$BUILDSPEC_FILE" "$GITHUB_REPO_NAME" "$GITHUB_REPO_BRANCH" "$GITHUB_USER" "$GITHUB_TOKEN" "$TAGS" "$PIPELINE_TYPE" "$BUCKET_NAME" "$OBJECTKEY" "$PARAMETERS_FILE" "$SAM_INPUT_FILE" "$SAM_OUTPUT_FILE" "$SOURCE_BUCKET" "$DEST_BUCKET"
+    create_or_update_pipeline "$APP_NAME" "$CODEBUILD_IMAGE" "$BUILDSPEC_FILE" "$GITHUB_REPO_NAME" "$GITHUB_REPO_BRANCH" "$GITHUB_USER" "$GITHUB_TOKEN" "$TAGS" "$PIPELINE_TYPE" "$BUCKET_NAME" "$OBJECTKEY" "$PARAMETERS_FILE" "$SAM_INPUT_FILE" "$SAM_OUTPUT_FILE" "$SOURCE_BUCKET" "$DEST_BUCKET" "$TEMPLAT_DIR" "$REGION"
   fi
 }
 
