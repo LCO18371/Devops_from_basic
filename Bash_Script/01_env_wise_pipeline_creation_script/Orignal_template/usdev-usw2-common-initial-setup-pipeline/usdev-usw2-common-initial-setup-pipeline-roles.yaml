@@ -1,0 +1,149 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Common resources for application deployed to Lambda
+Parameters:
+  AppName:
+    Type: String
+    Description: Name of the application.
+    MinLength: "1"
+    MaxLength: "80"
+    AllowedPattern: "[A-Za-z0-9-]+"
+    ConstraintDescription: Malformed input parameter. AppName must only contain upper and lower case letters, numbers, and -.  
+  Region:
+    Type: String
+    Description: "Provide region value, for example: us, eu, jp etc."
+  CountryEnv:
+    Type: String
+    Description: "Provide country env variable , for example: usdev, usqa."
+  DynamoDBTableName:
+    Type: String
+    Description: "Provide DynamoDB Table Name for Terraform locking."
+  StatefileBucket:
+    Type: String
+    Description: "Provide bucket name for Terraform Statefile storage."
+
+Resources:
+  CodeBuildTrustRole:
+    Description: Creating service role in IAM for AWS CodeBuild
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${AppName}-codebuild-role"
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [codebuild.amazonaws.com]
+          Action: sts:AssumeRole
+      Path: /
+
+  CodeBuildRolePolicy:
+    Type: AWS::IAM::Policy
+    DependsOn: CodeBuildTrustRole
+    Description: Setting IAM policy for the service role for AWS CodeBuild
+    Properties:
+      PolicyName: !Sub "${AppName}-codebuild-policy"
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Resource:  
+              - !Sub "arn:aws:s3:::${CountryEnv}*"
+              - !Sub "arn:aws:s3:::${CountryEnv}*/*"
+              - !Sub "arn:aws:s3:::${StatefileBucket}*"
+              - !Sub "arn:aws:s3:::${StatefileBucket}*/*"
+            Action: ["s3:*"] # Full S3 Access
+          - Effect: Allow
+            Resource: ["*"]
+            Action: ["sns:SendMessage"]
+          - Effect: Allow
+            Resource: ["*"]
+            Action:
+              - "logs:CreateLogGroup"
+              - "logs:CreateLogStream"
+              - "logs:PutLogEvents"
+          - Effect: Allow
+            Resource: ["*"]
+            Action:
+              - "ses:SendEmail"
+              - "ses:SendRawEmail" # SES Access
+          - Effect: Allow
+            Resource: ["*"]
+            Action:
+              - "ec2:*" # Full EC2 Access
+          - Effect: Allow
+            Resource:
+              - !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${CountryEnv}-*"
+            Action:
+              - "lambda:*"
+          - Effect: Allow
+            Resource: ["*"]
+            Action:
+              - "cloudfront:*" # Full CloudFront Access
+          - Effect: Allow
+            Resource: 
+              - !Sub "arn:aws:iam::${AWS::AccountId}:role/${CountryEnv}-*"
+              - !Sub "arn:aws:iam::${AWS::AccountId}:policy/${CountryEnv}-*"
+            Action:
+              - "iam:*" # Full IAM Access
+          - Effect: Allow
+            Resource: ["*"]
+            Action:
+              - "route53:*" # Full Route 53 Access
+          - Effect: Allow
+            Resource: ["*"]
+            Action:
+              - "waf:*" # Full WAF Access
+          - Effect: Allow
+            Resource: ["*"]
+            Action:
+              - "wafv2:*" # Full WAFv2 Access
+          - Effect: Allow
+            Resource: 
+              - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${DynamoDBTableName}"
+            Action:
+              - "dynamodb:*" # Full WAFv2 Access
+          - Effect: Allow
+            Resource: 
+              - !Sub "arn:aws:codeartifact:${AWS::Region}:${AWS::AccountId}:domain*"
+              - !Sub "arn:aws:codeartifact:${AWS::Region}:${AWS::AccountId}:repository*"
+              - !Sub "arn:aws:codeartifact:${AWS::Region}:${AWS::AccountId}:package/${Region}-omron-code-artifact/${Region}-omron-common-packages*"
+            Action:
+              - "codeartifact:Describe*"
+              - "codeartifact:Get*"
+              - "codeartifact:List*"
+              - "codeartifact:ReadFromRepository*"
+              - "codeartifact:PublishPackageVersion"
+      Roles: [!Ref CodeBuildTrustRole]
+
+
+  CodePipelineTrustRole:
+    Description: Creating service role in IAM for AWS CodePipeline
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${AppName}-codepipeline-role"
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [codepipeline.amazonaws.com]
+          Action: sts:AssumeRole
+      Path: /
+
+  CodePipelineRolePolicy:
+    Type: AWS::IAM::Policy
+    DependsOn: CodePipelineTrustRole
+    Description: Setting IAM policy for the service role for AWS CodePipeline
+    Properties:
+      PolicyName: !Sub "${AppName}-codepipeline-policy"
+      PolicyDocument:
+        Statement:
+        - Action: ["cloudwatch:*", "s3:*", "iam:PassRole","codebuild:*","codestar:*", "codestar-connections:UseConnection"]
+          Resource: "*"
+          Effect: Allow
+      Roles: [!Ref CodePipelineTrustRole]
+Outputs:
+  CodePipelineRole:
+    Description: "Role for code pipeline"
+    Value: !GetAtt CodePipelineTrustRole.Arn
+  CodeBuildRole:
+    Description: "Role for code build to build"
+    Value: !GetAtt CodeBuildTrustRole.Arn
+

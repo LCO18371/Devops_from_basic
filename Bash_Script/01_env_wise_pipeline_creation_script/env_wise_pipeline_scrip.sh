@@ -31,10 +31,11 @@ ENVIRONMENT1="${2:-usdev}"
 REGION="${3:-usw2}"
 #pipeline1="usdev-usw2-common-initial-setup"
 #pipeline2="usv1-generic-init-create"
-#pipeline3="usv1-generic-be-ec2-create"
-#pipeline4="usv1-generic-be-create"
-#pipeline5="usv1-generic-fe-create"
-#pipeline6="usv1-generic-ec2-create"
+#pipeline3="usv1-generic-be-create"
+#pipeline4="usv1-generic-fe-create"
+#pipeline5="usv1-generic-ec2-create"
+#pipeline6="usv1-generic-be-ec2-create"
+
 
 Pipeline1="$ENVIRONMENT1-$REGION-common-initial-setup"
 Pipeline2="$ENVIRONMENT-generic-init-create"
@@ -84,14 +85,21 @@ copy_templates_to_perm_bucket() {
   # Path setup
   local template_dir="$TEMPLAT_DIR"
   local folder_name=""
+  #pipeline1="usdev-usw2-common-initial-setup"
+  #pipeline2="usv1-generic-init-create"
+  #pipeline3="usv1-generic-be-create"
+  #pipeline4="usv1-generic-fe-create"
+  #pipeline5="usv1-generic-ec2-create"
+  #pipeline6="usv1-generic-be-ec2-create"
+
 
   case "$app_name" in
-    "$Pipeline1") folder_name="usw2-common-initial-setup-pipeline" ;;
-    "$Pipeline2") folder_name="usv1-generic-init-create-pipeline" ;;
-    "$Pipeline3") folder_name="usv1-generic-be-ec2-create-pipeline" ;;
-    "$Pipeline4") folder_name="usv1-generic-default-pipeline" ;;
-    "$Pipeline5") folder_name="usv1-generic-default-pipeline" ;;
-    "$Pipeline6") folder_name="usv1-generic-default-pipeline" ;;
+    "$Pipeline1") folder_name="usdev-usw2-common-initial-setup-pipeline" ;;
+    "$Pipeline2") folder_name="generic-init-create-pipeline" ;;
+    "$Pipeline3") folder_name="generic-be-ec2-create" ;;
+    "$Pipeline4") folder_name="generic-be-codepipline-create" ;;
+    "$Pipeline5") folder_name="generic-be-codepipline-create" ;;
+    "$Pipeline6") folder_name="generic-be-ec2-create" ;;
     *) 
       echo "❌ Error: Unrecognized pipeline name: $app_name"
       return 1

@@ -4,9 +4,9 @@ github_repo_branch="dev"
 github_repo_name="Omoron-DevOps"
 github_token="123456"
 github_user="Ravi"
-dest_bucket="testing-bucket008"
-region="eu-north-1"
-template_dir="/home/ubuntu/Github_repo/Devops_from_basic/Bash_Script/01_env_wise_pipeline_creation_script/templates"
+dest_bucket="testingravi-eu-west-1"
+region="eu-west-1"
+template_dir="/home/ubuntu/Github_repo/Devops_from_basic/Bash_Script/01_env_wise_pipeline_creation_script/Orignal_template"
   
 
 [PIPELINE]
