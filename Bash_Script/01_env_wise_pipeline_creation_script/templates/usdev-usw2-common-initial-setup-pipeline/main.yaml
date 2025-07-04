@@ -1,0 +1,100 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Main template for a CI/CD Serverless application."
+Parameters:
+  AppName:
+    Type: String
+    Description: Name of the application.
+    MinLength: "1"
+    MaxLength: "80"
+    AllowedPattern: "[A-Za-z0-9-]+"
+    ConstraintDescription: Malformed input parameter. AppName must only contain upper and lower case letters, numbers, and -.  
+  CodeBuildImage:
+    Type: String
+    Default: "aws/codebuild/standard:7.0"
+    Description: Image used for CodeBuild project.
+  BuildSpecFileNamePlan:
+    Type: String
+    Description: Name of buildspec file for CodeBuild project.
+  BuildSpecFileNameApply:
+    Type: String
+    Description: Name of buildspec file for CodeBuild project.
+  GitHubRepoName:
+    Type: String
+    Description: The GitHub repo name
+  GitHubRepoBranch:
+    Type: String
+    Description: The GitHub repo branch code pipelines should watch for changes on.
+  GitHubUser:
+    Type: String
+    Description: GitHub UserName. This username must have access to the GitHubToken.
+  GitHubToken:
+    NoEcho: true
+    Type: String
+    Description: "Secret. OAuthToken with access to Repo. Long string of characters and digits. Go to https://github.com/settings/tokens"
+  RolesTemplateURL:
+    Type: String
+    Description: URL of the serverless roles template stored in S3.
+  CodePipelineTemplateURL:
+    Type: String
+    Description: URL of the CodePipeline template stored in S3.
+  ArtifactBucketName:
+    Type: String
+    Description: "S3 bucket for storing pipeline artifacts."
+  VariableFilePath:
+    Type: String
+    Description: "Provide tfvars file path."
+  StatefileBucket:
+    Type: String
+    Description: "Provide bucket name for Terraform Statefile storage."
+  BucketObjectPath:
+    Type: String
+    Description: "Provide bucket object path where statefile will be stored."
+  DynamoDBTableName:
+    Type: String
+    Description: "Provide DynamoDB Table Name for Terraform locking."
+  CountryEnv:
+    Type: String
+    Description: "Provide country env variable , for example: usdev, usqa."
+  DeploymentRegion:
+    Type: String
+    Description: "Provide Deployment region value, for example: usw2, euw1 etc."
+  Region:
+    Type: String
+    Description: "Provide region value, for example: us, eu, jp etc."
+
+
+
+Resources:
+  ServerlessRoles:
+    Type: "AWS::CloudFormation::Stack"
+    Properties:
+      Parameters:
+        AppName: !Ref AppName
+        Region: !Ref Region
+        CountryEnv: !Ref CountryEnv
+        DynamoDBTableName: !Ref DynamoDBTableName
+        StatefileBucket: !Ref StatefileBucket
+      TemplateURL: !Ref RolesTemplateURL
+  ServerlessPipeline:
+    Type: "AWS::CloudFormation::Stack"
+    DependsOn: [ServerlessRoles]
+    Properties:
+      Parameters:
+        AppName: !Ref AppName
+        ArtifactBucketName: !Ref ArtifactBucketName
+        CodeBuildImage: !Ref CodeBuildImage
+        BuildSpecFileNamePlan: !Ref BuildSpecFileNamePlan
+        BuildSpecFileNameApply: !Ref BuildSpecFileNameApply
+        GitHubRepoName: !Ref GitHubRepoName
+        GitHubRepoBranch: !Ref GitHubRepoBranch
+        GitHubUser: !Ref GitHubUser
+        GitHubToken: !Ref GitHubToken
+        CodePipelineRole: !GetAtt ServerlessRoles.Outputs.CodePipelineRole
+        CodeBuildRole: !GetAtt ServerlessRoles.Outputs.CodeBuildRole
+        VariableFilePath: !Ref VariableFilePath
+        StatefileBucket: !Ref StatefileBucket
+        BucketObjectPath: !Ref BucketObjectPath
+        DynamoDBTableName: !Ref DynamoDBTableName
+        CountryEnv: !Ref CountryEnv
+        DeploymentRegion: !Ref DeploymentRegion
+      TemplateURL: !Ref CodePipelineTemplateURL

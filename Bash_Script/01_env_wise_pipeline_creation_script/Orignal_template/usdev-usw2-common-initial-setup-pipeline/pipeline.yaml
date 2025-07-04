@@ -1,0 +1,193 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Complete CI/CD pipeline for Terraform deployments."
+
+Parameters:
+  AppName:
+    Type: String
+    Description: Name of the application.
+    MinLength: "1"
+    MaxLength: "80"
+    AllowedPattern: "[A-Za-z0-9-]+"
+    ConstraintDescription: Malformed input parameter. AppName must only contain upper and lower case letters, numbers, and -.  
+  CodeBuildImage:
+    Type: String
+    Default: "aws/codebuild/standard:7.0"
+    Description: Image used for CodeBuild project.
+  BuildSpecFileNamePlan:
+    Type: String
+    Description: Name of buildspec file for CodeBuild project.
+  BuildSpecFileNameApply:
+    Type: String
+    Description: Name of buildspec file for CodeBuild project.
+  GitHubRepoName:
+    Type: String
+    Description: The GitHub repo name
+  GitHubRepoBranch:
+    Type: String
+    Description: The GitHub repo branch code pipelines should watch for changes on.
+  GitHubUser:
+    Type: String
+    Description: GitHub UserName. This username must have access to the GitHubToken.
+  GitHubToken:
+    NoEcho: true
+    Type: String
+    Description: "Secret. OAuthToken with access to Repo. Long string of characters and digits. Go to https://github.com/settings/tokens"
+  CodePipelineRole:
+    Type: String
+    Description: Role the pipeline will use
+  CodeBuildRole:
+    Type: String
+    Description: Role for code build plan stage
+  ArtifactBucketName:
+    Type: String
+    Description: "S3 bucket for storing pipeline artifacts."
+  VariableFilePath:
+    Type: String
+    Description: "Provide tfvars file path."
+  StatefileBucket:
+    Type: String
+    Description: "Provide bucket name for Terraform Statefile storage."
+  BucketObjectPath:
+    Type: String
+    Description: "Provide bucket object path where statefile will be stored."
+  DynamoDBTableName:
+    Type: String
+    Description: "Provide DynamoDB Table Name for Terraform locking."
+  CountryEnv:
+    Type: String
+    Description: "Provide country env variable , for example: usdev, usqa."
+  DeploymentRegion:
+    Type: String
+    Description: "Provide Deployment region value, for example: usw2, euw1 etc."
+
+
+Resources:
+  TerraformPlanBuild:
+    Description: Creating AWS CodeBuild project
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Artifacts:
+        Type: CODEPIPELINE
+      Description: !Sub "Building stage for ${AppName}."
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        EnvironmentVariables:
+          - Name: S3_ARTIFACT_BUCKET
+            Value: !Ref ArtifactBucketName
+          - Name: TF_VAR
+            Value: !Ref VariableFilePath
+          - Name: STATE_FILE_BUCKET
+            Value: !Ref StatefileBucket
+          - Name: STATE_FILE_PATH
+            Value: !Ref BucketObjectPath
+          - Name: REGION
+            Value: !Sub ${AWS::Region}
+          - Name: DB_TABLE
+            Value: !Ref DynamoDBTableName
+          - Name: CountryEnv
+            Value: !Ref CountryEnv
+          - Name:  DeploymentRegion
+            Value: !Ref DeploymentRegion
+        Image: !Ref CodeBuildImage
+        Type: LINUX_CONTAINER
+      Name: !Sub "${AppName}-plan-build"
+      ServiceRole: !Ref CodeBuildRole
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: !Ref BuildSpecFileNamePlan
+      Tags:
+        - Key: app-name
+          Value: !Ref AppName
+      TimeoutInMinutes: 15 
+  TerraformApplyBuild:
+    Description: Creating AWS CodeBuild project tfApply
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Artifacts:
+        Type: CODEPIPELINE
+      Description: !Sub "Building stage for ${AppName}."
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        EnvironmentVariables:
+          - Name: S3_ARTIFACT_BUCKET
+            Value: !Ref ArtifactBucketName
+          - Name: TF_VAR
+            Value: !Ref VariableFilePath
+          - Name: STATE_FILE_BUCKET
+            Value: !Ref StatefileBucket
+          - Name: STATE_FILE_PATH
+            Value: !Ref BucketObjectPath
+          - Name: REGION
+            Value: !Sub ${AWS::Region}
+          - Name: DB_TABLE
+            Value: !Ref DynamoDBTableName
+        Image: !Ref CodeBuildImage
+        Type: LINUX_CONTAINER
+      Name: !Sub "${AppName}-apply-build"
+      ServiceRole: !Ref CodeBuildRole
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: !Ref BuildSpecFileNameApply
+      Tags:
+        - Key: app-name
+          Value: !Ref AppName
+      TimeoutInMinutes: 15 
+  ProjectPipeline:
+    Type: AWS::CodePipeline::Pipeline
+    Properties:
+      Name: !Sub "${AppName}-pipeline"
+      RoleArn: !Ref CodePipelineRole
+      ArtifactStore:
+        Type: S3
+        Location: !Ref ArtifactBucketName
+      Stages:
+        - Name: Source
+          Actions:
+            - Name: source
+              ActionTypeId:
+                Category: Source
+                Owner: ThirdParty
+                Provider: GitHub
+                Version: "1"
+              OutputArtifacts:
+                - Name: SourceArtifact
+              Configuration:
+                Repo: !Ref GitHubRepoName
+                Branch: !Ref GitHubRepoBranch
+                OAuthToken: !Ref GitHubToken
+                Owner: !Ref GitHubUser
+        - Name: Build
+          Actions:
+            - Name: terraform-plan
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Provider: CodeBuild
+                Version: "1"
+              InputArtifacts:
+                - Name: SourceArtifact
+              OutputArtifacts:
+                - Name: PlanArtifact
+              Configuration:
+                ProjectName: !Ref TerraformPlanBuild
+        - Name: Approval
+          Actions:
+            - Name: manual-approval
+              ActionTypeId:
+                Category: Approval
+                Owner: AWS
+                Provider: Manual
+                Version: "1"
+        - Name: Deploy
+          Actions:
+            - Name: terraform-apply
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Provider: CodeBuild
+                Version: "1"
+              InputArtifacts:
+                #- Name: PlanArtifact
+                - Name: SourceArtifact
+              Configuration:
+                ProjectName: !Ref TerraformApplyBuild

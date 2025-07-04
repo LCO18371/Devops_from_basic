@@ -1,3 +1,4 @@
+
 # Local .terraform directories
 **/.terraform/*
 
@@ -33,7 +34,9 @@ override.tf.json
 /.terraform.lock.hcl
 /terraform.tfstate
 /terraform.tfstate.backup
+
 /11--Terraform/11.0_Terraform_ec2_creation/.terraform/
 /11--Terraform/11.0_Terraform_ec2_creation/.terraform.lock.hcl
 /11--Terraform/11.0_Terraform_ec2_creation/terraform.tfstate
 /11--Terraform/11.0_Terraform_ec2_creation/terraform.tfstate.backup
+

@@ -1,0 +1,67 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Main template for a CI/CD backend job deployment."
+Parameters:
+  AppName:
+    Type: String
+    Description: Name of the application.
+    MinLength: "1"
+    MaxLength: "80"
+    AllowedPattern: "[A-Za-z0-9-]+"
+    ConstraintDescription: Malformed input parameter. AppName must only contain upper and lower case letters, numbers, and -.
+  CodeBuildImage:
+    Type: String
+    Default: "aws/codebuild/standard:6.0"
+    Description: Image used for CodeBuild project.
+  BuildSpecFileName:
+    Type: String
+    Description: Name of buildspec file for CodeBuild project.
+  GitHubRepoName:
+    Type: String
+    Description: The GitHub repo name
+  GitHubRepoBranch:
+    Type: String
+    Description: The GitHub repo branch code pipelines should watch for changes on
+    Default: dev
+  GitHubUser:
+    Type: String
+    Description: GitHub UserName. This username must have access to the GitHubToken.
+  GitHubToken:
+    NoEcho: true
+    Type: String
+    Description: "Secret. OAuthToken with access to Repo. Long string of characters and digits. Go to https://github.com/settings/tokens"
+  BucketName:
+    Type: String
+    Description: Name of the destination bucket to deploy
+  ObjectKey:
+    Type: String
+    Description: Destination deploy bucket path
+  RolesTemplateURL:
+    Type: String
+    Description: "URL of the serverless roles template stored in S3"
+  CodePipelineTemplateURL:
+    Type: String
+    Description: "URL of the CodePipeline template stored in S3"
+Resources:
+  ServerlessRoles:
+    Type: "AWS::CloudFormation::Stack"
+    Properties:
+      Parameters:
+        AppName: !Ref AppName
+      TemplateURL: !Ref RolesTemplateURL
+  ServerlessPipeline:
+    Type: "AWS::CloudFormation::Stack"
+    DependsOn: [ServerlessRoles]
+    Properties:
+      Parameters:
+        AppName: !Ref AppName
+        CodeBuildImage: !Ref CodeBuildImage
+        GitHubRepoName: !Ref GitHubRepoName
+        GitHubRepoBranch: !Ref GitHubRepoBranch
+        GitHubUser: !Ref GitHubUser
+        GitHubToken: !Ref GitHubToken
+        BuildSpecFileName: !Ref BuildSpecFileName
+        BucketName: !Ref BucketName
+        ObjectKey: !Ref ObjectKey
+        CodePipelineRole: !GetAtt ServerlessRoles.Outputs.CodePipelineRole
+        CodeBuildRole: !GetAtt ServerlessRoles.Outputs.CodeBuildRole
+      TemplateURL: !Ref CodePipelineTemplateURL
